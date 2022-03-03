@@ -1,0 +1,66 @@
+#include "airport_network.hpp"
+
+#include <cassert>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "adjacency_list_graph.hpp"
+#include "adjacency_matrix_graph.hpp"
+#include "airport_database.hpp"
+#include "graph_traversal.hpp"
+#include "undirected_graph.hpp"
+
+AirportNetwork::AirportNetwork(const AirportDatabase& airport_database)
+    : airport_database_(airport_database),
+      airport_graph_(airport_database.size())
+{
+    // fill in the graph with all the route data
+    std::vector<FlightRoute> routes = airport_database.routes();
+    for (int i = 0; i < routes.size(); i++)
+    {
+        FlightRoute route = routes[i];
+        int index_one = airport_database.index(route.code_one());
+        int index_two = airport_database.index(route.code_two());
+        Airport airport_one = airport_database.airport(route.code_one());
+        Airport airport_two = airport_database.airport(route.code_two());
+        airport_graph_.add_edge(index_one, index_two, airport_one.distance_miles(airport_two));
+    }
+}
+
+int AirportNetwork::num_airports() const noexcept {
+  return airport_graph_.vertex_count();
+}
+
+int AirportNetwork::num_flight_routes() const noexcept {
+  return airport_graph_.edge_count();
+}
+
+std::vector<std::string> AirportNetwork::at_most_one_layover(
+    const std::string& code) const {
+
+    int airport_index = airport_database_.index(code);
+
+    std::vector<std::string> result;
+
+    // at most one layover is just a max distance of two
+    std::vector<bool> distances_at_most_two = distance_at_most_two(airport_graph_, airport_index);
+
+    for (int i = 0; i < distances_at_most_two.size(); i++)
+    {
+        if (distances_at_most_two[i])
+        {
+            result.push_back(airport_database_.code(i));
+        }
+    }
+
+  return result;
+}
+
+std::vector<int> AirportNetwork::least_distance(const std::string& code) const {
+    int airport_index = airport_database_.index(code);
+
+    std::vector<int> least_distances = shortest_path(airport_graph_, airport_index);
+
+    return least_distances;
+}
